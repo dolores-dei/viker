@@ -5,7 +5,7 @@ use std::env::consts::{OS, ARCH};
 struct Args {
     #[arg(short, long)]
     anime_name: Option<String>,
-    #[arg(short, long, default_value = "vlc")]
+    #[arg(short, long, default_value_t = default_video_player())]
     video_player: Option<String>
 
 }
