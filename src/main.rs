@@ -1,5 +1,9 @@
+mod web;
+
 use clap::Parser;
 use std::env::consts::{OS, ARCH};
+
+use select::predicate::{Name, Class, Predicate};
 
 #[derive(Parser,Debug)]
 struct Args {
@@ -17,14 +21,21 @@ fn default_video_player() -> String {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = Args::parse();
+
+    let mut url = String::from("https://ww4.gogoanime2.org/search/");
 
     if let Some(name) = cli.anime_name {
         println!("{}", name);
+        url.push_str(&name);
     }
     if let Some(video) = cli.video_player {
         println!("{}", video);
     }
+
+    let res = web::get_anime_titles(&url).await;
+    println!("anime titles: {:#?}", res.unwrap());
 
 }
