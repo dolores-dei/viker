@@ -1,29 +1,119 @@
-use clap::Parser;
-use std::env::consts::{OS, ARCH};
+mod menu;
 
-#[derive(Parser, Debug)]
-struct Args {
-    #[arg(short, long)]
-    anime_name: Option<String>,
+use reqwest;
+use serde_json::{Value, json};
+use std::error::Error;
 
-    #[arg(short, long, default_value_t = default_video_player())]
-    video_player: String,
+async fn search_anime(allanime_api: &str, query: &str, mode: &str, agent: &str, allanime_refr: &str) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+    let search_gql = r#"query($search: SearchInput, $limit: Int, $page: Int, $translationType: VaildTranslationTypeEnumType, $countryOrigin: VaildCountryOriginEnumType) {
+        shows(search: $search, limit: $limit, page: $page, translationType: $translationType, countryOrigin: $countryOrigin) {
+            edges {
+                _id
+                name
+                availableEpisodes
+                __typename
+            }
+        }
+    }"#;
+
+    let client = reqwest::Client::new();
+    let resp = client.post(allanime_api)
+        .header("User-Agent", agent)
+        .header("Referer", allanime_refr)
+        .json(&json!({
+            "query": search_gql,
+            "variables": {
+                "search": {
+                    "allowAdult": false,
+                    "allowUnknown": false,
+                    "query": query
+                },
+                "limit": 40,
+                "page": 1,
+                "translationType": mode,
+                "countryOrigin": "ALL"
+            }
+        }))
+        .send().await?
+        .text().await?;
+
+    let json_resp: Value = serde_json::from_str(&resp)?;
+    let mut results = Vec::new();
+
+    if let Some(edges) = json_resp["data"]["shows"]["edges"].as_array() {
+        for edge in edges {
+            let id = edge["_id"].as_str().unwrap_or_default().to_string();
+            let name = edge["name"].as_str().unwrap_or_default().to_string();
+            let episodes = edge["availableEpisodes"].to_string();
+            results.push((id, format!("{} ({} episodes)", name, episodes)));
+        }
+    }
+
+    Ok(results)
 }
 
-fn default_video_player() -> String {
-    match (OS, ARCH) {
-        ("macos", "aarch64") => "iina".to_string(), // Apple Silicon
-        ("linux", "x86_64") => "vlc".to_string(),  // Linux AMD64
-        _ => "vlc".to_string(),                    // Default for other OS/Arch combinations
+async fn episodes_list(allanime_api: &str, show_id: &str, mode: &str, agent: &str, allanime_refr: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    let episodes_list_gql = r#"query ($showId: String!) {
+        show(_id: $showId) {
+            _id
+            availableEpisodesDetail
+        }
+    }"#;
+
+    let client = reqwest::Client::new();
+    let resp = client.post(allanime_api)
+        .header("User-Agent", agent)
+        .header("Referer", allanime_refr)
+        .json(&json!({
+            "query": episodes_list_gql,
+            "variables": {
+                "showId": show_id
+            }
+        }))
+        .send().await?
+        .text().await?;
+    println!("Response Text: {}", resp);
+    let json_resp: Value = serde_json::from_str(&resp)?;
+    println!("JSON Response: {:?}", json_resp);
+    let mut episodes = Vec::new();
+
+    if let Some(episodes_detail) = json_resp["data"]["show"]["availableEpisodesDetail"].get(mode) {
+        if let Some(episodes_array) = episodes_detail.as_array() {
+            for episode in episodes_array {
+                if let Some(ep_number) = episode.as_str() {
+                    episodes.push(ep_number.to_string());
+                }
+            }
+        }
     }
+
+    Ok(episodes)
 }
 
-fn main() {
-    let cli = Args::parse();
+#[tokio::main]
+async fn main() {
+    let allanime_api = "https://api.allanime.day/api";
+    let query = "my hero"; // later Replace with user's search query
+    let anime_id = "Yr7ha4n76ofd7BeSX"; // onl for testing
+    let mode = "sub"; // or "dub", user preference
+    let agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0";
+    let allanime_refr = "https://allanime.to";
 
-    if let Some(name) = cli.anime_name {
-        println!("{}", name);
+    match search_anime(allanime_api, query, mode, agent, allanime_refr).await {
+        Ok(anime_list) => {
+            for (id, name) in anime_list {
+                println!("ID: {}, Name: {}", id, name);
+            }
+        }
+        Err(e) => eprintln!("Error: {}", e),
     }
-    println!("{}", cli.video_player);
+    match episodes_list(allanime_api, anime_id, mode, agent, allanime_refr).await {
+        Ok(episodes) => {
+            for episode in episodes {
+                println!("Episode: {}", episode);
+            }
+        }
+        Err(e) => eprintln!("Error: {}", e),
+    }
 
 }
