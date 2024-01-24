@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::env::consts::{OS, ARCH};
 
 #[derive(Parser,Debug)]
 struct Args {
@@ -7,6 +8,13 @@ struct Args {
     #[arg(short, long, default_value = "vlc")]
     video_player: Option<String>
 
+}
+fn default_video_player() -> String {
+    match (OS, ARCH) {
+        ("macos", "aarch64") => "iina".to_string(), // Apple Silicon
+        ("linux", "x86_64") => "vlc".to_string(),  // Linux AMD64
+        _ => "vlc".to_string(),
+    }
 }
 
 fn main() {
