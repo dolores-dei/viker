@@ -20,7 +20,6 @@ pub fn list_anime(animes: Vec<(String, String)>) -> Option<String> {
     let output = fzf.wait_with_output().expect("Failed to read stdout");
     if output.status.success() {
         let output_str = String::from_utf8_lossy(&output.stdout);
-        println!("FZF OUTPUT: {}", output_str);
 
         // Adjust the regular expression to match the ID before the first hyphen
         let re = Regex::new(r"^(\w+) -").unwrap();

@@ -1,8 +1,14 @@
 use reqwest;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::error::Error;
 
-pub async fn search_anime(allanime_api: &str, query: &str, mode: &str, agent: &str, allanime_refr: &str) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+pub async fn search_anime(
+    allanime_api: &str,
+    query: &str,
+    mode: &str,
+    agent: &str,
+    allanime_refr: &str,
+) -> Result<Vec<(String, String)>, Box<dyn Error>> {
     let search_gql = r#"query($search: SearchInput, $limit: Int, $page: Int, $translationType: VaildTranslationTypeEnumType, $countryOrigin: VaildCountryOriginEnumType) {
         shows(search: $search, limit: $limit, page: $page, translationType: $translationType, countryOrigin: $countryOrigin) {
             edges {
@@ -15,7 +21,8 @@ pub async fn search_anime(allanime_api: &str, query: &str, mode: &str, agent: &s
     }"#;
 
     let client = reqwest::Client::new();
-    let resp = client.post(allanime_api)
+    let resp = client
+        .post(allanime_api)
         .header("User-Agent", agent)
         .header("Referer", allanime_refr)
         .json(&json!({
@@ -32,8 +39,10 @@ pub async fn search_anime(allanime_api: &str, query: &str, mode: &str, agent: &s
                 "countryOrigin": "ALL"
             }
         }))
-        .send().await?
-        .text().await?;
+        .send()
+        .await?
+        .text()
+        .await?;
 
     let json_resp: Value = serde_json::from_str(&resp)?;
     let mut results = Vec::new();
@@ -50,7 +59,13 @@ pub async fn search_anime(allanime_api: &str, query: &str, mode: &str, agent: &s
     Ok(results)
 }
 
-pub async fn episodes_list(allanime_api: &str, show_id: &str, mode: &str, agent: &str, allanime_refr: &str) -> Result<Vec<String>, Box<dyn Error>> {
+pub async fn episodes_list(
+    allanime_api: &str,
+    show_id: &str,
+    mode: &str,
+    agent: &str,
+    allanime_refr: &str,
+) -> Result<Vec<String>, Box<dyn Error>> {
     let episodes_list_gql = r#"query ($showId: String!) {
         show(_id: $showId) {
             _id
@@ -59,7 +74,8 @@ pub async fn episodes_list(allanime_api: &str, show_id: &str, mode: &str, agent:
     }"#;
 
     let client = reqwest::Client::new();
-    let resp = client.post(allanime_api)
+    let resp = client
+        .post(allanime_api)
         .header("User-Agent", agent)
         .header("Referer", allanime_refr)
         .json(&json!({
@@ -68,11 +84,12 @@ pub async fn episodes_list(allanime_api: &str, show_id: &str, mode: &str, agent:
                 "showId": show_id
             }
         }))
-        .send().await?
-        .text().await?;
-    // println!("Response Text: {}", resp);
+        .send()
+        .await?
+        .text()
+        .await?;
+    println!("Response Text: {}", resp);
     let json_resp: Value = serde_json::from_str(&resp)?;
-    // println!("JSON Response: {:?}", json_resp);
     let mut episodes = Vec::new();
 
     if let Some(episodes_detail) = json_resp["data"]["show"]["availableEpisodesDetail"].get(mode) {
@@ -86,4 +103,57 @@ pub async fn episodes_list(allanime_api: &str, show_id: &str, mode: &str, agent:
     }
 
     Ok(episodes)
+}
+
+pub async fn get_episode_url(
+    allanime_api: &str,
+    show_id: &str,
+    episode_string: &str,
+    mode: &str,
+    agent: &str,
+    allanime_refr: &str,
+) -> Result<Vec<String>, Box<dyn Error>> {
+    let episode_embed_gql = r#"query ($showId: String!, $translationType: VaildTranslationTypeEnumType!, $episodeString: String!) {
+        episode(showId: $showId, translationType: $translationType, episodeString: $episodeString) {
+            episodeString
+            sourceUrls
+        }
+    }"#;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(allanime_api)
+        .header("User-Agent", agent)
+        .header("Referer", allanime_refr)
+        .json(&json!({
+            "query": episode_embed_gql,
+            "variables": {
+                "showId": show_id,
+                "translationType": mode,
+                "episodeString": episode_string
+            }
+        }))
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    let json_resp: Value = serde_json::from_str(&resp)?;
+    println!(" json resp: {}", json_resp);
+    let mut urls = Vec::new();
+
+    if let Some(sources) = json_resp["data"]["episode"]["sourceUrls"].as_array() {
+        for source in sources {
+            if let Some(url) = source["sourceUrl"].as_str() {
+                urls.push(url.to_string());
+            }
+            if let Some(download_obj) = source.get("downloads") {
+                if let Some(download_url) = download_obj["downloadUrl"].as_str() {
+                    urls.push(download_url.to_string());
+                }
+            }
+        }
+    }
+
+    Ok(urls)
 }

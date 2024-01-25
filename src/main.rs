@@ -3,7 +3,7 @@ use clap::Parser;
 mod menu;
 mod api;
 
-#[derive(Parser,Debug)]
+#[derive(Parser, Debug)]
 struct Args {
     #[clap(short, long, value_name = "ANIME_NAME")]
     anime_name: Option<String>,
@@ -15,8 +15,8 @@ struct Args {
 fn default_video_player() -> String {
     match (OS, ARCH) {
         ("macos", "aarch64") => "iina".to_string(), // Apple Silicon
-        ("linux", "x86_64") => "vlc".to_string(),  // Linux AMD64
-        _ => "vlc".to_string(),                    // Default for other OS/Arch combinations
+        ("linux", "x86_64") => "vlc".to_string(),   // Linux AMD64
+        _ => "vlc".to_string(),                     // Default for other OS/Arch combinations
     }
 }
 
@@ -25,11 +25,13 @@ fn default_video_player() -> String {
 async fn main() {
 
     let args = Args::parse();
-    let anime_name = args.anime_name.unwrap_or("failed anime name entry".to_string());
+    let anime_name = args
+        .anime_name
+        .unwrap_or("failed anime name entry".to_string());
 
     let allanime_api = "https://api.allanime.day/api";
     let query = anime_name.as_str(); // later Replace with user's search query
-    let anime_id = "Yr7ha4n76ofd7BeSX"; // onl for testing
+    let mut anime_id: Option<String> = None; // onl for testing
     let mode = "sub"; // or "dub", user preference
     let agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0";
     let allanime_refr = "https://allanime.to";
