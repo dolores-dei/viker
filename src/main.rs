@@ -1,7 +1,7 @@
 use std::env::consts::{ARCH, OS};
 use clap::Parser;
 mod menu;
-mod web;
+mod api;
 
 #[derive(Parser,Debug)]
 struct Args {
@@ -36,17 +36,17 @@ async fn main() {
 
     let mut anime_result: Option<String> = Some("error".to_string());
 
-    match web::search_anime(allanime_api, query, mode, agent, allanime_refr).await {
+    match api::search_anime(allanime_api, query, mode, agent, allanime_refr).await {
         Ok(anime_list) => {
             anime_result = menu::list_anime(anime_list);
             println!("SEARCH_ANIME --- {:?}", anime_result);
         }
         Err(e) => eprintln!("Error: {}", e),
     }
-    match web::episodes_list(allanime_api, anime_result.unwrap().as_str(), mode, agent, allanime_refr).await {
+    match api::episodes_list(allanime_api, anime_result.unwrap().as_str(), mode, agent, allanime_refr).await {
         Ok(episodes) => {
             let choice = menu::list_episodes(episodes);
-            println!("{:#?}", choice);
+            println!("{}", choice.unwrap().replace("\n", ""));
         }
         Err(e) => eprintln!("Error: {}", e),
     }
