@@ -1,7 +1,5 @@
-use crate::web::get_episode_url;
-use clap::Parser;
 use std::env::consts::{ARCH, OS};
-
+use clap::Parser;
 mod menu;
 mod web;
 
@@ -22,8 +20,10 @@ fn default_video_player() -> String {
     }
 }
 
+
 #[tokio::main]
 async fn main() {
+
     let args = Args::parse();
     let anime_name = args
         .anime_name
@@ -36,26 +36,21 @@ async fn main() {
     let agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0";
     let allanime_refr = "https://allanime.to";
 
+    let mut anime_result: Option<String> = Some("error".to_string());
+
     match web::search_anime(allanime_api, query, mode, agent, allanime_refr).await {
         Ok(anime_list) => {
-            anime_id = menu::list_anime(anime_list);
-            println!(" anime id: {:?}", &anime_id.clone().unwrap());
+            anime_result = menu::list_anime(anime_list);
+            println!("SEARCH_ANIME --- {:?}", anime_result);
         }
         Err(e) => eprintln!("Error: {}", e),
     }
-    match web::episodes_list(allanime_api, &anime_id.clone().unwrap(), mode, agent, allanime_refr).await {
-        Ok(_episodes) => {
-            let test = get_episode_url(
-                allanime_api,
-                &anime_id.unwrap(),
-                "5",
-                mode,
-                agent,
-                allanime_refr,
-            )
-            .await;
-            println!("episode url : {:?}", test);
+    match web::episodes_list(allanime_api, anime_result.unwrap().as_str(), mode, agent, allanime_refr).await {
+        Ok(episodes) => {
+            let choice = menu::list_episodes(episodes);
+            println!("{:#?}", choice);
         }
         Err(e) => eprintln!("Error: {}", e),
     }
+
 }
