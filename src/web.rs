@@ -70,9 +70,9 @@ pub async fn episodes_list(allanime_api: &str, show_id: &str, mode: &str, agent:
         }))
         .send().await?
         .text().await?;
-    println!("Response Text: {}", resp);
+    // println!("Response Text: {}", resp);
     let json_resp: Value = serde_json::from_str(&resp)?;
-    println!("JSON Response: {:?}", json_resp);
+    // println!("JSON Response: {:?}", json_resp);
     let mut episodes = Vec::new();
 
     if let Some(episodes_detail) = json_resp["data"]["show"]["availableEpisodesDetail"].get(mode) {
