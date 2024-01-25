@@ -1,24 +1,35 @@
-use std::process::{Command, Stdio};
+use regex::Regex;
 use std::io::Write;
+use std::process::{Command, Stdio};
 
-pub fn list_anime(animes: Vec<String>) -> Option<String> {
-    // Create a command to run fzf
+pub fn list_anime(animes: Vec<(String, String)>) -> Option<String> {
+    //takes vec ( anime id , show name ) returns just the anime id
     let mut fzf = Command::new("fzf")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to start fzf");
+
     {
-        // Write anime list to the stdin of fzf
         let stdin = fzf.stdin.as_mut().expect("Failed to open stdin");
-        for anime in animes {
-            writeln!(stdin, "{}", anime).expect("Failed to write to stdin");
+        for anime in animes.iter() {
+            writeln!(stdin, "{} - {}", anime.0, anime.1).expect("Failed to write to stdin");
         }
     }
 
     let output = fzf.wait_with_output().expect("Failed to read stdout");
     if output.status.success() {
-        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        println!("FZF OUTPUT: {}", output_str);
+
+        // Adjust the regular expression to match the ID before the first hyphen
+        let re = Regex::new(r"^(\w+) -").unwrap();
+        if let Some(caps) = re.captures(&output_str) {
+            if let Some(id_match) = caps.get(1) {
+                return Some(id_match.as_str().to_string());
+            }
+        }
+        None
     } else {
         None
     }
