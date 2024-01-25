@@ -53,7 +53,7 @@ pub fn list_episodes(episodes: Vec<String>) -> Option<String>{
     if output.status.success() {
         let output_str = String::from_utf8_lossy(&output.stdout);
         println!("FZF OUTPUT: {}", output_str);
-        return Some(output_str.to_string());
+        return Some(output_str.to_string().trim().to_string());
     }
     None
 }

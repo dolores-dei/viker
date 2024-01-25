@@ -1,5 +1,7 @@
 use std::env::consts::{ARCH, OS};
 use clap::Parser;
+use crate::web::get_episode_url;
+
 mod menu;
 mod web;
 
@@ -36,21 +38,20 @@ async fn main() {
     let agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0";
     let allanime_refr = "https://allanime.to";
 
-    let mut anime_result: Option<String> = Some("error".to_string());
 
     match web::search_anime(allanime_api, query, mode, agent, allanime_refr).await {
         Ok(anime_list) => {
-            anime_result = menu::list_anime(anime_list);
-            println!("SEARCH_ANIME --- {:?}", anime_result);
+            anime_id = menu::list_anime(anime_list);
         }
         Err(e) => eprintln!("Error: {}", e),
     }
-    match web::episodes_list(allanime_api, anime_result.unwrap().as_str(), mode, agent, allanime_refr).await {
+    match web::episodes_list(allanime_api, anime_id.clone().unwrap().as_str(), mode, agent, allanime_refr).await {
         Ok(episodes) => {
             let choice = menu::list_episodes(episodes);
-            println!("{:#?}", choice);
+            println!("{:#?}", choice.clone().unwrap());
+            let links = get_episode_url(allanime_api,&anime_id.unwrap(),&choice.unwrap(),mode,agent,allanime_refr).await;
+            println!("{:?}",links.unwrap());
         }
         Err(e) => eprintln!("Error: {}", e),
-    }
-
+    };
 }

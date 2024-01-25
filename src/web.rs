@@ -1,6 +1,7 @@
 use reqwest;
 use serde_json::{json, Value};
 use std::error::Error;
+use std::process::Command;
 
 pub async fn search_anime(
     allanime_api: &str,
@@ -156,4 +157,16 @@ pub async fn get_episode_url(
     }
 
     Ok(urls)
+}
+
+fn provider_init(resp: &str, pattern: &str) -> Result<String, Box<dyn Error>> {
+    let command = format!("printf \"%s\" \"{}\" | sed -n \"{}\" | head -1 | cut -d':' -f2 | sed 's/../&\\n/g' | sed 's/^01$/9/g;s/^08$/0/g;s/^05$/=/g;s/^0a$/2/g;s/^0b$/3/g;s/^0c$/4/g;s/^07$/?/g;s/^00$/8/g;s/^5c$/d/g;s/^0f$/7/g;s/^5e$/f/g;s/^17$/\\//g;s/^54$/l/g;s/^09$/1/g;s/^48$/p/g;s/^4f$/w/g;s/^0e$/6/g;s/^5b$/c/g;s/^5d$/e/g;s/^0d$/5/g;s/^53$/k/g;s/^1e$/\\&/g;s/^5a$/b/g;s/^59$/a/g;s/^4a$/r/g;s/^4c$/t/g;s/^4e$/v/g;s/^57$/o/g;s/^51$/i/g;' | tr -d '\\n' | sed \"s/\\/clock\\/clock\\.json/\"", resp, pattern);
+
+    let output = Command::new("sh").arg("-c").arg(&command).output()?;
+
+    if !output.status.success() {
+        return Err("Command execution failed".into());
+    }
+
+    Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }
