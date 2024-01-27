@@ -11,8 +11,9 @@ Viker is a rust command-line interface (CLI) application inspired by ani-cli. It
 
 ## Dependencies
 
-- todo!
+- mpv / vlc ( linux )
+- iina ( apple silicon macos )
 
 ## Installation
 
-- todo!
+- not yet applicable :(
