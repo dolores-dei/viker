@@ -6,7 +6,7 @@ use std::process::Command;
 #[derive(Debug)]
 pub struct ProvideUrl {
     provider: Provider,
-    url: String,
+    pub(crate) url: String,
 }
 
 impl ProvideUrl {
@@ -14,7 +14,7 @@ impl ProvideUrl {
         if url.contains("--") {
             let temp = url.replace("--", "");
             url = temp.trim().to_string();
-        } else if url.contains("http") || url.contains("://") {
+        } else if url.contains("http") || url.contains("://") || url.contains("//") {
             return None;
         }
         let provider = match provider.as_str() {
